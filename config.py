@@ -8,4 +8,4 @@ skip = 0
 accountKey = 'JaDRZblJ6OheyvTxxxxxxxxxxxxxxxxWx8OThobZoRA'
 
 # 修改此项为True，开启API搜索
-ENABLE_API = False
+ENABLE_BING_API = False

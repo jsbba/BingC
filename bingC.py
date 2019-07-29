@@ -16,7 +16,7 @@ import sys
 import time
 from IPy import IPy
 from api import BingSearch
-from config import ENABLE_API
+from config import ENABLE_BING_API
 
 queue = Queue.Queue()
 ips = set()
@@ -29,31 +29,62 @@ def scan():
     while 1:
         if queue.qsize() > 0:
             ip = queue.get()
-            if ENABLE_API:
-                print "[*]api enabled!"
-                ans_obj = BingSearch("ip:" + ip)
-                for each in ans_obj['d']['results']:
-                    ips.add(ip + ' -> ' + each['Url'].split('://')[-1].split('/')[0] + " | " + each['Title'])
-            else:
-                q = "https://www.bing.com/search?q=ip%3A" + ip
+
+            #先bing普通处理,主要结果数量优先
+            morepage = 1
+            page = 1
+            index = 1
+            prec = ''
+            while morepage:
+                index = ((page-1) * 10)+1
+
+               
+                
+                q = "https://www.bing.com/search?q=ip%3A" + ip + "&first=" + str(index)
                 c = requests.get(q, headers={
                     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0'}).content
+                #print q
+
                 p = re.compile(r'<cite>(.*?)</cite>')
                 l = re.findall(p, c)
                 for each in l:
                     domain = each.split('://')[-1].split('/')[0]
                     msg = ip + ' -> ' + domain
                     ips.add(msg)
+
+                
+                page = page + 1
+
+                #print ips
+                
+                if cmp(c,prec):
+                    morepage =0
+                
+                prec = c
+
+
+
+            
+
+            # bing api处理
+            if ENABLE_BING_API:
+                print "[*]api enabled!"
+                ans_obj = BingSearch("ip:" + ip)
+                for each in ans_obj['d']['results']:
+                    ips.add(ip + ' -> ' + each['Url'].split('://')[-1].split('/')[0] + " | " + each['Title'])
+            
+
+
+
+
+
+            
+
         else:
             thread_num -= 1
             break
 
 
-def api_scan():
-    global thread_num
-    while 1:
-        if queue.qsize() > 0:
-            BingSearch(queue.get())
 
 
 def setThreadDaemon(thread):
@@ -96,6 +127,7 @@ if __name__ == "__main__":
             print each
         except UnicodeEncodeError:
             pass
+    #ips去重复处理
     print "Total: " + str(len(ips))
 
     if len(sys.argv) is 3:
