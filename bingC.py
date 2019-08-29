@@ -35,36 +35,37 @@ def scan():
             page = 1
             index = 1
             prec = ''
+            pagesize = 0;
+            cookies = requests.cookies.RequestsCookieJar()
+            response = requests.get('https://www.bing.com/',headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0'},cookies=cookies)
+            cookies.update(response.cookies)
             while morepage:
-                index = ((page-1) * 10)+1
+                #获取pagesize
 
+                q = "https://www.bing.com/search?first=" + str(index) + "&q=ip:" + ip           
+                c = requests.get(q,proxies={"https":"http://localhost:8080"} , verify=False,headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0'},cookies=cookies).content
+
+                content = re.search(r'<ol id="b_results">(.*?)<nav role="navigation"',c).group(1)
+                if (page == 1):
+                    pagesize = int(re.search(r'<ul class="sb_pagF">.*?first=(\d+).*?</a>', c).group(1))-1
                
-                
-                q = "https://www.bing.com/search?q=ip%3A" + ip + "&first=" + str(index)
-                c = requests.get(q, headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0'}).content
-                #print q
-
-                p = re.compile(r'<cite>(.*?)</cite>')
-                l = re.findall(p, c)
+                l = re.findall(r'<li class="b_algo">(.*?)</li>', c)
                 for each in l:
-                    domain = each.split('://')[-1].split('/')[0]
-                    msg = ip + ' -> ' + domain
+                    domain = re.search(r'<h2><a target="_blank" href="(.*?)".*?</h2>',each).group(1)
+                    title = re.search(r'<h2><a.*?>(.*?)</a></h2>',each).group(1)
+                    msg = ip + ' -> ' + domain + ' -> ' + title
                     ips.add(msg)
 
                 
                 page = page + 1
-
-                #print ips
-                
-                if cmp(c,prec):
+                index = ((page-1) * pagesize)+1
+                if (prec==content):
                     morepage =0
                 
-                prec = c
+                prec = content
 
-
-
-            
 
             # bing api处理
             if ENABLE_BING_API:
@@ -75,10 +76,6 @@ def scan():
             
 
 
-
-
-
-            
 
         else:
             thread_num -= 1
